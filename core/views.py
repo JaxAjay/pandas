@@ -67,27 +67,54 @@ def pandacsv(request):
 
 def inventory_sort(request):
     csv_obj = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'Inventory.xlsx'))
-
     df = pandas.DataFrame(csv_obj)
-    df1 = df[['CATEGORY', 'SUB-CATE', 'GENDER']]
-    print(df1.CATEGORY.unique())
-    category_unique = df1.CATEGORY.unique()
-    gender_unique = df1.GENDER.unique()
+    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')',
+                                                                                                           '').str.replace(
+        '-', '_')
+    df1 = df[['category', 'sub_cate', 'gender']]
+    print(df1.category.unique())
+    category_unique = df1.category.unique()
+    gender_unique = df1.gender.unique()
     print(gender_unique)
-    sub_category_unique = df1.SUB-CATE.unique()
+    sub_category_unique = df1.sub_cate.unique()
     print(sub_category_unique)
-    # print(df[['CATEGORY','SUB-CATE','GENDER']])
-    # print(df1.sort_values(by=['CATEGORY','SUB-CATE']))
-    obj = {}
-    # df.loc[df['CATEGORY'] == category_unique[0]]
-    df_category = {i: df1.loc[df1['CATEGORY'] == i] for i in category_unique}
 
-    # df_category = [ df1.loc[df1['CATEGORY']==i] for i in category_unique ]
-    print(df_category)
-    # df_category_gender = {i: [j.loc[j['GENDER'] == i] for k, j in df_category.items()] for i in gender_unique}
-    df_category_gender = {k: {i: v.loc[v['GENDER'] == i] for i in gender_unique} for k, v in df_category.items()}
-
-    # df_category_gender_sub_category =
+    df_category = {i: df1.loc[df1['category'] == i] for i in category_unique}
+    # print(df_category)
+    df_category_gender = {k: {i: v.loc[v['gender'] == i] for i in gender_unique} for k, v in df_category.items()}
+    print(len(df_category_gender))
     print(df_category_gender)
-    print(obj)
+    df_category_gender_sub_category = \
+        {k: {k2: {i: v2.loc[v2['sub_cate'] == i] for i in sub_category_unique} for k2, v2 in v.items()} for k, v in
+         df_category_gender.items()}
+    print(df_category_gender_sub_category)
+
     pass
+
+
+def inventory_groupby(request):
+    # csv_obj = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'Inventory.xlsx'))
+    # df = pandas.DataFrame(csv_obj)
+    # df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
+    #     .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
+    # params = ['category','gender']
+    # df_groups = df.groupby(by=params)
+    # dd = {k: v for k,v in df_groups}
+    # print(dd)
+    value = call_function('category', 'gender', 'sub_cate')
+    pass
+
+
+def call_function(*args):
+    csv_obj = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'Inventory.xlsx'))
+    df = pandas.DataFrame(csv_obj)
+    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
+        .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
+    try:
+        df_groups = df.groupby(by=list(args))
+        dd = {str(k).strip().replace('(', '').replace(')', '').
+                  replace("'", '').replace(",", '').replace(' ', "_"): v.to_dict('list') for k, v in df_groups}
+        print(dd)
+        return dd
+    except:
+        return None
