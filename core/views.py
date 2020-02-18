@@ -1,4 +1,7 @@
+import json
+
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import render
 import pandas
 import csv
@@ -101,8 +104,8 @@ def inventory_groupby(request):
     # df_groups = df.groupby(by=params)
     # dd = {k: v for k,v in df_groups}
     # print(dd)
-    value = call_function('category', 'gender', 'sub_cate')
-    pass
+    value = call_function('brand', 'category')
+    return HttpResponse(json.dumps(value, default=str), status=200)
 
 
 def call_function(*args):
@@ -114,7 +117,7 @@ def call_function(*args):
         df_groups = df.groupby(by=list(args))
         dd = {str(k).strip().replace('(', '').replace(')', '').
                   replace("'", '').replace(",", '').replace(' ', "_"): v.to_dict('list') for k, v in df_groups}
-        print(dd)
+        # print(dd)
         return dd
     except:
         return None
