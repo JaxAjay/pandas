@@ -21,6 +21,6 @@ urlpatterns = [
     path('csv/',readcsv,name='readcsv'),
     path('pandacsv/',pandacsv,name='pandacsv'),
     path('inventory_sort/',inventory_sort,name='inventory_sort'),
-    path('inventory_groupby/',inventory_groupby,name = 'inventory_groupby'),
+    path('inventory_groupby/',add_batch_column,name = 'inventory_groupby'),
 
 ]

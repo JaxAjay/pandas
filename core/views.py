@@ -71,9 +71,8 @@ def pandacsv(request):
 def inventory_sort(request):
     csv_obj = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'Inventory.xlsx'))
     df = pandas.DataFrame(csv_obj)
-    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')',
-                                                                                                           '').str.replace(
-        '-', '_')
+    df.columns = df.columns.str.strip().str.lower() \
+        .str.replace(' ', '_').str.replace('(', '').str.replace(')', '').str.replace('-', '_')
     df1 = df[['category', 'sub_cate', 'gender']]
     print(df1.category.unique())
     category_unique = df1.category.unique()
@@ -96,14 +95,6 @@ def inventory_sort(request):
 
 
 def inventory_groupby(request):
-    # csv_obj = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'Inventory.xlsx'))
-    # df = pandas.DataFrame(csv_obj)
-    # df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
-    #     .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
-    # params = ['category','gender']
-    # df_groups = df.groupby(by=params)
-    # dd = {k: v for k,v in df_groups}
-    # print(dd)
     value = call_function('brand', 'category')
     return HttpResponse(json.dumps(value, default=str), status=200)
 
@@ -121,3 +112,62 @@ def call_function(*args):
         return dd
     except:
         return None
+
+
+import random
+
+
+def panda_tuts(request):
+    df = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'Archived_Transaction.xlsx'), sheet_name=0)
+
+    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
+        .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
+    df1 = df
+    df3 = df1.drop_duplicates(subset=['ordernumber', 'po_productid1', 'shipmentcreateddt',
+                                      'po_quantityordered', 'sh_unitsshipped']).dropna(subset=['sh_unitsshipped'])
+
+    t2 = df3.groupby(['transactionid'])
+
+    new_df = pandas.DataFrame()
+
+    for k, v in t2:
+        if v['po_quantityordered'].sum() == v['sh_unitsshipped'].sum():
+            new_df = new_df.append(v, ignore_index=True)
+        else:
+            for k2, v2 in v.groupby(['po_productid1']):
+                # check2.append({k2: v2})
+                # v3 = v2.sort_values['sh_unitsshipped']
+                # check1.append({k2: v3})
+                x = int(v2.iloc[0]['po_quantityordered'])
+                y = 0
+                for index, row in v2.iterrows():
+                    # print(row)
+                    y += int(row['sh_unitsshipped'])
+                    if x >= y:
+                        new_df = new_df.append(row)
+                    else:
+                        pass
+
+    new_df = new_df[df3.columns]
+    # new_df.to_excel('archieved_transaction.xlsx',index=False)
+    print(len(df3), len(new_df))
+    pass
+
+
+def add_batch_column(request):
+    df = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'transaction.xlsx'), sheet_name=0)
+
+    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
+        .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
+    # print(df.columns)
+    df1 = df
+    df_group = df1.groupby(['ordernumber', 'po_productid1'])
+    new_df = pandas.DataFrame()
+    for k, v in df_group:
+        v.sort_values('shipmentcreateddt', ascending=True, inplace=True)
+        v.insert(len(v.columns), 'batch_deploy', [x for x in range(0, len(v))])
+        new_df = new_df.append(v)
+
+    new_df.to_csv('transaction_batch_deploy.csv', index=False, date_format='%Y-%m-%d, %H:%M:%S')
+    # new_df.to_excel('transaction_batch_deploy.xlsx',index=False)
+    pass
