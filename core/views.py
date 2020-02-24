@@ -155,7 +155,7 @@ def panda_tuts(request):
 
 
 def add_batch_column(request):
-    df = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'transaction.xlsx'), sheet_name=0)
+    df = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'archieved_transaction.xlsx'), sheet_name=0)
 
     df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
         .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
@@ -168,6 +168,98 @@ def add_batch_column(request):
         v.insert(len(v.columns), 'batch_deploy', [x for x in range(0, len(v))])
         new_df = new_df.append(v)
 
-    new_df.to_csv('transaction_batch_deploy.csv', index=False, date_format='%Y-%m-%d, %H:%M:%S')
+    new_df.to_csv('archieved_transaction_batch_deploy.csv', index=False, date_format='%Y-%m-%d, %H:%M:%S')
     # new_df.to_excel('transaction_batch_deploy.xlsx',index=False)
+    pass
+
+
+def test_function(request):
+    df = pandas.read_excel("%s/%s" % (settings.STATICFILES_DIR, 'archieved_transaction.xlsx'), sheet_name=0)
+
+    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
+        .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
+
+    df1 = df[['ordernumber', 'po_productid1']]
+    print(df1)
+    print(dir(df1))
+    print(df1['ordernumber'].unique(), type(df1))
+
+    pass
+
+
+def number_of_distinct_column(request):
+    df = pandas.read_csv("%s/%s" % (settings.STATICFILES_DIR, 'archieved_transaction_batch_deploy.csv'))
+
+    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
+        .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
+    print(df.columns)
+    df1 = df[['ordernumber', 'pocreateddt', 'po_productid1', 'po_quantityordered', 'sh_unitsshipped']]
+    print(df1.head(10))
+    groups = df.groupby(['ordernumber'])
+    new_df = pandas.DataFrame()
+    for k, v in groups:
+        distinct = v.groupby('po_productid1')
+        y = 0
+        y += distinct.first()['po_quantityordered'].sum()
+        v.insert(len(v.columns), 'distinct_products', [len(distinct) for _ in range(0, len(v))])
+        v.insert(len(v.columns), 'bulk_order', [y for _ in range(0, len(v))])
+        new_df = new_df.append(v)
+    # print(new_df)
+    new_df.to_csv('archieved_transaction_new.csv', index=False, date_format='%Y-%m-%d, %H:%M:%S')
+
+    pass
+
+
+def yet_to_shipped(request):
+    df = pandas.read_csv("%s/%s" % (settings.STATICFILES_DIR, 'archieved_transaction_new.csv'))
+
+    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
+        .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
+
+    df1 = df[['ordernumber', 'pocreateddt', 'po_productid1', 'po_quantityordered',
+              'sh_unitsshipped', 'shipmentcreateddt']]
+
+    new_df = pandas.DataFrame()
+    for k, v in df.groupby(['po_productid1', 'ordernumber']):
+        total = 0
+        for i in v['po_quantityordered'].unique():
+            total += i
+        v.insert(len(v.columns), 'yet_to_ship', [(total - i) for i in calculate_total(v.iterrows())])
+        new_df = new_df.append(v)
+
+    new_df.to_csv('archieved_transaction_ship.csv', index=False, date_format='%Y-%m-%d, %H:%M:%S')
+
+    pass
+
+
+def calculate_total(x):
+    val = 0
+    lis = []
+    for i, j in x:
+        val += j['sh_unitsshipped']
+        lis.append(val)
+    return lis
+
+
+def yet_to_ship2(request):
+    df = pandas.read_csv("%s/%s" % (settings.STATICFILES_DIR, 'archieved_transaction_new.csv'))
+
+    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_') \
+        .str.replace('(', '').str.replace(')', '').str.replace('-', '_')
+
+    df1 = df[['ordernumber', 'pocreateddt', 'po_productid1', 'po_quantityordered',
+              'sh_unitsshipped', 'shipmentcreateddt']]
+
+    groups = df1.head(50).groupby(['po_productid1'])
+
+    for k, v in groups:
+        v1 = v.sort_values('pocreateddt', inplace=False)
+        v2 = v1.copy()
+        print(v1)
+        print('------------------------')
+        print(v2.sort_values('shipmentcreateddt', inplace=True))
+        # print('###################################')
+        for row , columns in v1.iterrows():
+            print(row , columns)
+
     pass
